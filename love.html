@@ -1,0 +1,392 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Love Player</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Sacramento&display=swap" rel="stylesheet">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Courier+Prime&family=Inter:wght@400;600&display=swap');
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            user-select: none;
+        }
+
+        body {
+            background-color: #050000;
+            color: #ff3333;
+            font-family: 'Courier Prime', monospace;
+            min-height: 100vh;
+            width: 100vw;
+            overflow: hidden;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            position: relative;
+        }
+
+        /* ستايل لإخفاء مشغل الصوت الافتراضي للمتصفح */
+        #audio-player {
+            display: none; 
+        }
+
+        /* --- Background Text Animation --- */
+        #text-container {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 0;
+            height: 0;
+            z-index: 0;
+        }
+
+        .flying-text {
+            position: absolute;
+            left: 50%;
+            top: 50%;
+            transform-origin: 0 0;
+            white-space: nowrap;
+            color: #cc5555; 
+            font-size: 14px;
+            opacity: 0.2; 
+            pointer-events: none;
+            text-shadow: 0 0 5px #ff0000;
+        }
+
+        /* --- Center Container --- */
+        .center-stage {
+            position: relative;
+            z-index: 10;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 20px; 
+            transform: translateY(0); 
+            padding: 20px 10px;
+            width: 100%; 
+        }
+
+        /* --- The Heart --- */
+        .heart-container {
+            cursor: pointer;
+            transition: transform 0.2s;
+            /* إضافة position: relative; لاحتواء الاسم في المنتصف */
+            position: relative;
+        }
+
+        .heart-container:active {
+            transform: scale(0.9); 
+        }
+
+        .heart-shape {
+            color: #800000;
+            font-size: 120px; /* حجم القلب الافتراضي */
+            filter: drop-shadow(0 0 40px rgba(255, 0, 0, 0.8));
+            animation: beat 1.5s infinite ease-in-out;
+            position: relative; /* لتمكين وضع الاسم فوقه */
+        }
+
+        /* إضافة ستايل لاسم "danah" داخل القلب */
+        .heart-name {
+            position: absolute;
+            top: 40%; 
+            left: 50%;
+            transform: translate(-50%, -50%);
+            /* استخدام الخط الرومانسي الجديد */
+            font-family: 'Sacramento', cursive; 
+            font-size: 40px;
+            color: #fff;
+            text-shadow: 0 0 10px #ff7777, 0 0 20px #ff0000;
+            z-index: 20;
+            pointer-events: none; /* لتسمح بالضغط على القلب تحته */
+            white-space: nowrap;
+        }
+
+        /* تعديل حجم القلب واسم "danah" للشاشات الأكبر */
+        @media (min-width: 600px) {
+            .heart-shape {
+                font-size: 180px; 
+            }
+            .heart-name {
+                font-size: 60px;
+            }
+        }
+
+        .heart-container:hover .heart-shape {
+            color: #aa0000;
+            filter: drop-shadow(0 0 60px rgba(255, 0, 0, 1));
+        }
+
+        @keyframes beat {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+        }
+
+        /* --- Message Area --- */
+        .message-area {
+            height: 50px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            width: 100%;
+            max-width: 500px;
+            padding: 0 10px;
+        }
+
+        .message-text {
+            color: #fff;
+            font-family: 'Inter', sans-serif;
+            font-size: 16px; 
+            font-weight: 600;
+            text-shadow: 0 0 10px rgba(255, 50, 50, 0.8);
+            animation: fadeIn 0.5s ease-out;
+            line-height: 1.4;
+        }
+
+        /* --- The Player Interface (Underneath) --- */
+        .player-card {
+            width: 90%; 
+            max-width: 320px; 
+            background: rgba(20, 0, 0, 0.6);
+            border: 1px solid rgba(255, 50, 50, 0.3);
+            backdrop-filter: blur(8px);
+            padding: 20px;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            color: white;
+            font-family: 'Inter', sans-serif;
+        }
+        
+        .progress-container { margin-bottom: 15px; }
+        .progress-bar { width: 100%; height: 4px; background: rgba(255, 255, 255, 0.2); border-radius: 2px; margin-bottom: 8px; position: relative; overflow: hidden; }
+        .progress-fill { width: 0%; height: 100%; background: #ff3333; box-shadow: 0 0 10px #ff3333; transition: width 0.1s linear; }
+        .timestamps { display: flex; justify-content: space-between; font-size: 11px; opacity: 0.7; }
+        .controls { display: flex; justify-content: space-between; align-items: center; font-size: 18px; color: #ddd; padding: 0 10px; }
+        .controls i { cursor: pointer; transition: 0.3s; }
+        .controls .play-btn { font-size: 32px; color: #fff; filter: drop-shadow(0 0 5px rgba(255,255,255,0.5)); }
+        .controls i:hover { color: #ff5555; text-shadow: 0 0 10px #ff5555; transform: scale(1.1); }
+
+        /* --- The Code Box (Bottom) --- */
+        .code-box {
+            position: absolute;
+            bottom: 10px; 
+            left: 50%;
+            transform: translateX(-50%);
+            width: 90%; 
+            max-width: 600px;
+            background: rgba(10, 0, 0, 0.8);
+            border: 1px solid rgba(100, 20, 20, 0.5);
+            padding: 8px 10px; 
+            border-radius: 8px;
+            font-size: 9px; 
+            color: #666;
+            z-index: 5;
+            font-family: 'Courier Prime', monospace;
+        }
+        .hl-red { color: #cc0000; }
+    </style>
+</head>
+<body>
+
+    <audio id="audio-player" loop>
+        <source src="your_love_song.mp3" type="audio/mpeg">
+        متصفحك لا يدعم تشغيل الملف الصوتي.
+    </audio>
+
+    <div id="text-container"></div>
+
+    <div class="center-stage">
+        
+        <div class="heart-container" onclick="displayLoveMessage()">
+            <div class="heart-shape">
+                <i class="fas fa-heart"></i>
+            </div>
+            <div class="heart-name">danah</div>
+        </div>
+
+        <div class="message-area">
+            <div id="dynamic-msg" class="message-text">Click the heart ml ❤️</div>
+        </div>
+
+        <div class="player-card">
+            <div class="progress-container">
+                <div class="progress-bar">
+                    <div class="progress-fill" id="progress-fill"></div>
+                </div>
+                <div class="timestamps">
+                    <span id="current-time">0:00</span>
+                    <span id="total-time">0:00</span>
+                </div>
+            </div>
+            <div class="controls">
+                <i class="fas fa-shuffle"></i>
+                <i class="fas fa-backward-step" onclick="skipBack()"></i>
+                <i class="fas fa-play play-btn" id="play-pause-icon" onclick="togglePlayPause()"></i>
+                <i class="fas fa-forward-step" onclick="skipForward()"></i>
+                <i class="fas fa-repeat"></i>
+            </div>
+        </div>
+
+    </div>
+
+
+    <script>
+        // --- 1. Background Animation Logic ---
+        const container = document.getElementById('text-container');
+        const textToRepeat = "i love u soo much danah <3";
+        const particleCount = 100;
+        
+        function createTextParticles() {
+            for (let i = 0; i < particleCount; i++) {
+                const span = document.createElement('div');
+                span.classList.add('flying-text');
+                span.innerText = textToRepeat;
+                const angle = Math.random() * 360;
+                const duration = 5 + Math.random() * 5;
+                const delay = Math.random() * -10;
+                
+                span.style.transform = `rotate(${angle}deg) translateX(60px)`;
+                
+                span.animate([
+                    { transform: `rotate(${angle}deg) translateX(0px)`, opacity: 0 },
+                    { transform: `rotate(${angle}deg) translateX(120px)`, opacity: 1, offset: 0.1 },
+                    { transform: `rotate(${angle}deg) translateX(900px)`, opacity: 0 }
+                ], {
+                    duration: duration * 1000,
+                    delay: delay * 1000,
+                    iterations: Infinity,
+                    easing: 'linear'
+                });
+                container.appendChild(span);
+            }
+        }
+        createTextParticles();
+
+
+        // --- 2. Quote Generator Logic ---
+        const messages = [
+            "You are my everything ❤️", "My heart beats for you ❤️", "Love of my life ❤️",
+            "You are my universe ❤️", "Forever and always ❤️", "My soulmate ❤️",
+            "You complete me ❤️", "I choose you, always ❤️", "My happy place ❤️",
+            "You are enough ❤️", "Endless love ❤️", "My favorite notification ❤️",
+            "You feel like home ❤️", "My sun and stars ❤️", "Better together ❤️",
+            "You are my calm ❤️", "My dream come true ❤️", "Lost in your eyes ❤️",
+            "My one and only ❤️", "Pure happiness ❤️", "My safe haven ❤️",
+            "Love you to the moon ❤️", "You are magic ❤️", "My forever date ❤️",
+            "Stuck on you ❤️", "You are my joy ❤️", "My heart’s song ❤️",
+            "Just us two ❤️", "Written in the stars ❤️", "My sweetest addiction ❤️",
+            "Always on my mind ❤️", "You are art ❤️", "My better half ❤️",
+            "Simply the best ❤️", "Crazy about you ❤️", "My morning thought ❤️",
+            "My goodnight wish ❤️", "You are my sunshine ❤️", "My favorite person ❤️",
+            "Love without limits ❤️", "Yours eternally ❤️", "My serendipity ❤️",
+            "Hearts aligned ❤️", "Perfectly imperfect ❤️", "My lucky charm ❤️",
+            "You own my heart ❤️", "Can't live without you ❤️", "My reason to smile ❤️",
+            "Love is you ❤️", "Soul connection ❤️", "My guiding light ❤️",
+            "Infinite love ❤️", "My precious gem ❤️", "You are spectacular ❤️",
+            "Heart thief ❤️", "My warmth in winter ❤️", "My cool breeze ❤️",
+            "Only have eyes for you ❤️", "My forever mood ❤️", "You are poetry ❤️",
+            "My beautiful reality ❤️", "Worth the wait ❤️", "My answered prayer ❤️",
+            "Love grew here ❤️", "My constant variable ❤️", "You are my home ❤️",
+            "The missing piece ❤️", "My favorite view ❤️", "Time stops with you ❤️",
+            "My unexpected joy ❤️", "You are a blessing ❤️", "My greatest adventure ❤️",
+            "Love redefined ❤️", "My daily motivation ❤️", "You are glowing ❤️",
+            "My heart smiles ❤️", "Unconditional love ❤️", "My partner in crime ❤️",
+            "You are timeless ❤️", "My sweet escape ❤️", "Love flows deep ❤️",
+            "My angel on earth ❤️", "You are exquisite ❤️", "My wildest dream ❤️",
+            "Love conquers all ❤️", "My peaceful place ❤️", "You are rare ❤️",
+            "My life's melody ❤️", "Together is better ❤️", "My sweet lullaby ❤️",
+            "You are my spark ❤️", "My love story ❤️", "Always yours ❤️",
+            "My heartbeat ❤️", "You are perfection ❤️", "My vivid dream ❤️",
+            "Love you more ❤️", "My eternity ❤️", "Simply, I love you ❤️"
+        ];
+
+        function displayLoveMessage() {
+            const msgElement = document.getElementById('dynamic-msg');
+            
+            // Pick a random message
+            const randomIndex = Math.floor(Math.random() * messages.length);
+            const newText = messages[randomIndex];
+
+            // Reset animation to play it again
+            msgElement.style.animation = 'none';
+            msgElement.offsetHeight; /* trigger reflow */
+            msgElement.style.animation = 'fadeIn 0.5s ease-out';
+            
+            // Set text
+            msgElement.innerText = newText;
+        }
+
+        // --- 3. Audio Control Logic (Improved) ---
+        const audio = document.getElementById('audio-player');
+        const playPauseIcon = document.getElementById('play-pause-icon');
+        const progressFill = document.getElementById('progress-fill');
+        const currentTimeEl = document.getElementById('current-time');
+        const totalTimeEl = document.getElementById('total-time');
+
+        // دالة لتحويل الثواني إلى صيغة (دقيقة:ثانية)
+        function formatTime(seconds) {
+            const min = Math.floor(seconds / 60);
+            const sec = Math.floor(seconds % 60);
+            return `${min}:${sec < 10 ? '0' : ''}${sec}`;
+        }
+
+        function togglePlayPause() {
+            if (audio.paused) {
+                audio.play().catch(error => {
+                    console.error("Autoplay failed, user interaction needed:", error);
+                });
+                playPauseIcon.classList.remove('fa-play');
+                playPauseIcon.classList.add('fa-pause');
+            } else {
+                audio.pause();
+                playPauseIcon.classList.remove('fa-pause');
+                playPauseIcon.classList.add('fa-play');
+            }
+        }
+        
+        function skipForward() {
+             // تخطي 10 ثواني للأمام
+             audio.currentTime += 10; 
+        }
+        
+        function skipBack() {
+             // تخطي 10 ثواني للخلف
+             audio.currentTime -= 10; 
+        }
+
+        // 🎧 تحديث شريط التقدم والوقت الحالي أثناء تشغيل الأغنية
+        audio.addEventListener('timeupdate', () => {
+            const duration = audio.duration;
+            const currentTime = audio.currentTime;
+            
+            if (!isNaN(duration)) {
+                // تحديث شريط التقدم
+                const progressPercent = (currentTime / duration) * 100;
+                progressFill.style.width = progressPercent + '%';
+
+                // تحديث الوقت الحالي
+                currentTimeEl.textContent = formatTime(currentTime);
+            }
+        });
+
+        // 🎧 عرض الوقت الكلي للأغنية عند تحميل بياناتها
+        audio.addEventListener('loadedmetadata', () => {
+            if (!isNaN(audio.duration)) {
+                totalTimeEl.textContent = formatTime(audio.duration);
+            } else {
+                totalTimeEl.textContent = '0:00'; 
+            }
+        });
+
+        // التأكد من أن المشغل يبدأ بزر Play
+        playPauseIcon.classList.remove('fa-pause');
+        playPauseIcon.classList.add('fa-play');
+    </script>
+</body>
+</html>
